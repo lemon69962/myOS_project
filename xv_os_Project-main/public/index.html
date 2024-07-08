@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat App</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row p-1">
+            <div class="col-1">User</div>
+            <div class="col-5"><input type="text" id="userInput" class="form-control" /></div>
+        </div>
+        <div class="row p-1">
+            <div class="col-1">Message</div>
+            <div class="col-5"><input type="text" class="form-control w-100" id="messageInput" /></div>
+        </div>
+        <div class="row p-1">
+            <div class="col-6 text-end">
+                <input type="button" id="sendButton" class="btn btn-primary" value="Send Message" />
+            </div>
+        </div>
+        <div class="row p-1">
+            <div class="col-12">
+                <div id="messageBox" class="border p-2" style="height: 200px; overflow-y: scroll;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://192.168.137.1:3000'); // Replace with your server IP
+
+        document.getElementById('sendButton').addEventListener('click', function() {
+            const userInput = document.getElementById('userInput').value;
+            const messageInput = document.getElementById('messageInput').value;
+
+            fetch('http://192.168.137.1:3000/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: userInput, message: messageInput })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        // Fetch and display messages on page load
+        window.onload = function() {
+            fetch('http://192.168.137.1:3000/messages')
+                .then(response => response.json())
+                .then(messages => {
+                    const messageBox = document.getElementById('messageBox');
+                    messages.forEach(message => {
+                        const messageElement = document.createElement('div');
+                        messageElement.textContent = `${message.username}: ${message.message}`;
+                        messageBox.prepend(messageElement); // Prepend messages
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        };
+
+        socket.on('message', (data) => {
+            const messageBox = document.getElementById('messageBox');
+            const messageElement = document.createElement('div');
+            messageElement.textContent = `${data.username}: ${data.message}`;
+            messageBox.prepend(messageElement); // Prepend new messages
+        });
+    </script>
+</body>
+</html>
