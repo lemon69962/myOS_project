@@ -5,39 +5,98 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Chat App</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background-color: #dee2e6; /* Changed to grey */
+        }
+        .chat-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .chat-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #007bff;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group input {
+            border-radius: 30px;
+            padding: 10px 20px;
+        }
+        .send-button {
+            background-color: #007bff;
+            color: #ffffff;
+            border-radius: 30px;
+            padding: 10px 20px;
+        }
+        .message-box {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: scroll;
+            margin-bottom: 20px;
+        }
+        .message {
+            background-color: #f1f1f1;
+            border-radius: 20px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .clear-input-button {
+            background-color: #dc3545;
+            color: #ffffff;
+            border-radius: 30px;
+            padding: 10px 20px;
+            margin-left: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="container mt-5">
-        <div class="row p-1">
-            <div class="col-1">User</div>
-            <div class="col-5"><input type="text" id="userInput" class="form-control" /></div>
-        </div>
-        <div class="row p-1">
-            <div class="col-1">Message</div>
-            <div class="col-5"><input type="text" class="form-control w-100" id="messageInput" /></div>
-        </div>
-        <div class="row p-1">
-            <div class="col-6 text-end">
-                <input type="button" id="sendButton" class="btn btn-primary" value="Send Message" />
+        <div class="chat-container">
+            <div class="chat-header">Simple Chat App</div>
+            <!-- Input field for the username -->
+            <div class="input-group">
+                <input type="text" id="userInput" class="form-control" placeholder="Enter your username" />
+                <button id="clearInputButton" class="btn clear-input-button">Clear</button>
             </div>
-        </div>
-        <div class="row p-1">
-            <div class="col-12">
-                <div id="messageBox" class="border p-2" style="height: 200px; overflow-y: scroll;">
-                </div>
+            <!-- Input field for the message -->
+            <div class="input-group">
+                <input type="text" class="form-control" id="messageInput" placeholder="Enter your message" />
+            </div>
+            <!-- Button to send the message -->
+            <div class="text-right">
+                <button id="sendButton" class="btn send-button"><i class="fas fa-paper-plane"></i> Send</button>
+            </div>
+            <!-- Container for displaying messages -->
+            <div id="messageBox" class="message-box"></div>
+            <!-- Button to clear message history -->
+            <div class="text-right">
+                <button id="clearHistoryButton" class="btn btn-danger">Clear History For ALL</button>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
     <script>
-        const socket = io('http://192.168.137.1:3000'); // Replace with your server IP
+        const socket = io('http://192.168.27.186:3000'); // Replace with your server IP
 
+        // Event listener for sending messages
         document.getElementById('sendButton').addEventListener('click', function() {
             const userInput = document.getElementById('userInput').value;
             const messageInput = document.getElementById('messageInput').value;
 
-            fetch('http://192.168.137.1:3000/send', {
+            fetch('http://192.168.27.186:3000/send', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -47,34 +106,70 @@
             .then(response => response.json())
             .then(data => {
                 console.log(data);
+                document.getElementById('messageInput').value = ''; // Clear input field after sending
+                scrollToBottom(); // Scroll to bottom after sending message
             })
             .catch(error => {
                 console.error('Error:', error);
             });
         });
 
+        // Event listener for clearing message input
+        document.getElementById('clearInputButton').addEventListener('click', function() {
+            document.getElementById('messageInput').value = ''; // Clear message input field
+        });
+
+        // Event listener for clearing message history
+        document.getElementById('clearHistoryButton').addEventListener('click', function() {
+            fetch('http://192.168.27.186:3000/clear-history', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message); // Output server response
+                document.getElementById('messageBox').innerHTML = ''; // Clear all messages in the message box
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        // Function to scroll to the bottom of the message box
+        function scrollToBottom() {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.scrollTop = messageBox.scrollHeight;
+        }
+
         // Fetch and display messages on page load
         window.onload = function() {
-            fetch('http://192.168.137.1:3000/messages')
+            fetch('http://192.168.27.186:3000/messages')
                 .then(response => response.json())
                 .then(messages => {
                     const messageBox = document.getElementById('messageBox');
                     messages.forEach(message => {
                         const messageElement = document.createElement('div');
                         messageElement.textContent = `${message.username}: ${message.message}`;
-                        messageBox.prepend(messageElement); // Prepend messages
+                        messageElement.className = 'message';
+                        messageBox.appendChild(messageElement); // Append messages
                     });
+                    scrollToBottom(); // Scroll to bottom on page load
                 })
                 .catch(error => {
                     console.error('Error:', error);
                 });
         };
 
+        // Listen for incoming messages from the socket
         socket.on('message', (data) => {
             const messageBox = document.getElementById('messageBox');
             const messageElement = document.createElement('div');
             messageElement.textContent = `${data.username}: ${data.message}`;
-            messageBox.prepend(messageElement); // Prepend new messages
+            messageElement.className = 'message';
+            messageBox.appendChild(messageElement); // Append new messages
+            scrollToBottom(); // Scroll to bottom after receiving message
         });
     </script>
 </body>

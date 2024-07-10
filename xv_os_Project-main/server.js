@@ -21,7 +21,7 @@ const port = 3000;
 const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: '',
+    password: '12345678',
     database: 'chatapp'
 });
 
@@ -41,14 +41,27 @@ app.use(bodyParser.json());
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Endpoint to fetch all messages
+// Endpoint to fetch all messages in ascending order
 app.get('/messages', (req, res) => {
-    const query = 'SELECT * FROM messages ORDER BY reg_date DESC';
+    const query = 'SELECT * FROM messages ORDER BY reg_date ASC';
     db.query(query, (err, results) => {
         if (err) {
             res.status(500).json({ error: err.message });
         } else {
             res.status(200).json(results);
+        }
+    });
+});
+
+// Endpoint to clear all messages
+app.post('/clear-history', (req, res) => {
+    const query = 'DELETE FROM messages';
+    db.query(query, (err, result) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            io.emit('history-cleared'); // Broadcast event to all clients
+            res.status(200).json({ message: 'Chat history cleared successfully' });
         }
     });
 });
@@ -69,6 +82,7 @@ app.post('/send', (req, res) => {
 
 io.on('connection', (socket) => {
     console.log('A user connected');
+
     socket.on('disconnect', () => {
         console.log('User disconnected');
     });
