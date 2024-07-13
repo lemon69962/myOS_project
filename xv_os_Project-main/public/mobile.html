@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat App - Mobile</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background: url('background2.jpg') no-repeat center center fixed; 
+            background-size: cover; 
+        }
+        .chat-container {
+            max-width: 100%;
+            margin: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .chat-header {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #007bff;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        .input-group input {
+            border-radius: 20px;
+            padding: 8px 15px;
+        }
+        .send-button {
+            background-color: #007bff;
+            color: #ffffff;
+            border-radius: 20px;
+            padding: 8px 15px;
+        }
+        .message-box {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 10px;
+            height: 150px;
+            overflow-y: scroll;
+            margin-bottom: 10px;
+        }
+        .message {
+            background-color: #f1f1f1;
+            border-radius: 20px;
+            padding: 8px;
+            margin-bottom: 5px;
+            color: black;
+        }
+        .message .username {
+            color: purple;
+            font-weight: bold;
+        }
+        .clear-input-button {
+            background-color: #dc3545;
+            color: #ffffff;
+            border-radius: 20px;
+            padding: 8px 15px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-3">
+        <div class="chat-container">
+            <div class="chat-header">Simple Chat App - Mobile</div>
+            <!-- Input field for the username -->
+            <div class="input-group">
+                <input type="text" id="mobileUserInput" class="form-control" placeholder="Enter your username" />
+                <button id="mobileClearInputButton" class="btn clear-input-button">Clear</button>
+            </div>
+            <!-- Input field for the message -->
+            <div class="input-group">
+                <input type="text" class="form-control" id="mobileMessageInput" placeholder="Enter your message" />
+            </div>
+            <!-- Button to send the message -->
+            <div class="text-right">
+                <button id="mobileSendButton" class="btn send-button"><i class="fas fa-paper-plane"></i> Send</button>
+            </div>
+            <!-- Container for displaying messages -->
+            <div id="mobileMessageBox" class="message-box"></div>
+            <!-- Button to clear message history -->
+            <div class="text-right">
+                <button id="mobileClearHistoryButton" class="btn btn-danger">Clear History For ALL</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://192.168.27.49:3000'); // Replace with your server IP
+
+        // Event listener for sending messages
+        document.getElementById('mobileSendButton').addEventListener('click', function() {
+            const userInput = document.getElementById('mobileUserInput').value;
+            const messageInput = document.getElementById('mobileMessageInput').value;
+
+            fetch('http://192.168.27.49:3000/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: userInput, message: messageInput })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                document.getElementById('mobileMessageInput').value = ''; // Clear input field after sending
+                scrollToBottom(); // Scroll to bottom after sending message
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        // Event listener for clearing message input
+        document.getElementById('mobileClearInputButton').addEventListener('click', function() {
+            document.getElementById('mobileMessageInput').value = ''; // Clear message input field
+        });
+
+        // Event listener for clearing message history
+        document.getElementById('mobileClearHistoryButton').addEventListener('click', function() {
+            fetch('http://192.168.27.49:3000/clear-history', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message); // Output server response
+                document.getElementById('mobileMessageBox').innerHTML = ''; // Clear all messages in the message box
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        // Function to scroll to the bottom of the message box
+        function scrollToBottom() {
+            const messageBox = document.getElementById('mobileMessageBox');
+            messageBox.scrollTop = messageBox.scrollHeight;
+        }
+
+        // Fetch and display messages on page load
+        window.onload = function() {
+            fetch('http://192.168.27.49:3000/messages')
+                .then(response => response.json())
+                .then(messages => {
+                    const messageBox = document.getElementById('mobileMessageBox');
+                    messages.forEach(message => {
+                        const messageElement = document.createElement('div');
+                        messageElement.innerHTML = `<span class="username">${message.username}</span>: ${message.message}`;
+                        messageElement.className = 'message';
+                        messageBox.appendChild(messageElement); // Append messages
+                    });
+                    scrollToBottom(); // Scroll to bottom on page load
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        };
+
+        // Listen for incoming messages from the socket
+        socket.on('message', (data) => {
+            const messageBox = document.getElementById('mobileMessageBox');
+            const messageElement = document.createElement('div');
+            messageElement.innerHTML = `<span class="username">${data.username}</span>: ${data.message}`;
+            messageElement.className = 'message';
+            messageBox.appendChild(messageElement); // Append new messages
+            scrollToBottom(); // Scroll to bottom after receiving message
+        });
+    </script>
+</body>
+</html>

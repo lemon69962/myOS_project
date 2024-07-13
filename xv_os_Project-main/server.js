@@ -66,6 +66,7 @@ app.post('/clear-history', (req, res) => {
     });
 });
 
+// Endpoint to send a message
 app.post('/send', (req, res) => {
     const { username, message } = req.body;
     const query = 'INSERT INTO messages (username, message) VALUES (?, ?)';
@@ -78,6 +79,16 @@ app.post('/send', (req, res) => {
             res.status(200).json({ message: 'Message saved' });
         }
     });
+});
+
+// Route for the web interface
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Route for the mobile interface
+app.get('/mobile', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'mobile.html'));
 });
 
 io.on('connection', (socket) => {
